@@ -1,0 +1,23 @@
+include LICENSE
+include README.md
+include CITATION.cff
+include CHANGELOG.md
+include pyproject.toml
+
+recursive-include src/ascal *.py
+
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude *.pyo
+global-exclude .DS_Store
+
+prune benchmarks
+prune notebooks
+prune tests
+prune documentation
+prune build
+prune dist
+prune .github
+prune .vscode
+prune .cursor
+prune src/ascal.egg-info

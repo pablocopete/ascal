@@ -1,0 +1,6 @@
+# Compatibility entrypoint for exact experiment reproducibility.
+# New users should follow README install modes and use:
+# - requirements-runtime.txt
+# - requirements-notebook.txt
+# - requirements-repro-lock.txt
+-r requirements-repro-lock.txt
