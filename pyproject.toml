@@ -11,9 +11,9 @@ license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
 requires-python = ">=3.10"
 authors = [
-  { name = "Diego Aineto", mail={dieaigar@vrain.upv.es} },
-  { name = "Enrico Scala", mail = {enrico.scala@unibs.it} },
-  { name = "Pablo Copete", mail={pcopgar@vrain.upv.es} },
+  { name = "Diego Aineto", email = "dieaigar@vrain.upv.es" },
+  { name = "Enrico Scala", email = "enrico.scala@unibs.it" },
+  { name = "Pablo Copete", email = "pcopgar@vrain.upv.es" },
 ]
 keywords = ["action-model-learning", "planning", "pddl", "unified-planning", "version-space"]
 classifiers = [
