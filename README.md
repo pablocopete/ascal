@@ -27,10 +27,10 @@ From the learned boundaries you can extract:
 | Model | Method | Guarantee |
 |---|---|---|
 | Sound model | `learner.sound_model()` | Never permits a transition the true model forbids |
-| Complete model | `learner.complete_model()` | U-border with non-contradictory effects. Splits ambiguous polarities into maximal completions |
-| Consistent complete model | `learner.complete_model_single()` | U-border with non-contradictory effects. Does not split hypothesis |
+| Complete model (split) | `learner.upper_border_split()` | U-border with non-contradictory effects. Splits ambiguous polarities into maximal completions |
+| Complete model (single) | `learner.upper_border_single()` | U-border with non-contradictory effects. Does not split hypothesis |
 | Upper-border model | `learner.raw_upper_bound()` | Compact U-boundary (one operator per precondition hypothesis). It is not complete but it is fast for planning. Can be used instead of blind search as a first approach |
-| Full version-space model | `learner.version_space()` | All consistent hypotheses (can be large) |
+| Full version-space model | `learner.complete_model()` | All consistent hypotheses (can be large) |
 
 ---
 
@@ -100,9 +100,9 @@ print(learner.demo_count)          # Total demonstrations processed
 
 # --- Extract learned models as UP Problem objects ---
 sound_problem  = learner.sound_model()        # Sound (L-boundary)
-border_problem = learner.raw_upper_bound()    # Compact U-boundary
-complete_model = learner.complete_model()     # Consistent split completions
-vs_problem     = learner.version_space()        # Full version space (may be large)
+border_problem    = learner.raw_upper_bound()        # Compact U-boundary
+upper_border_split = learner.upper_border_split()   # U-border split completions
+complete_problem   = learner.complete_model()        # Full version space (may be large)
 
 # --- Evaluate against labelled test data ---
 f1_s, f1_c, p_s, r_s, p_c, r_c = learner.evaluate(test_pos, test_neg)
@@ -224,12 +224,16 @@ Ensure the package is installed (`pip install -e .`) so that `import ascal` reso
 If you use ASCAL in academic work, please cite the KR 2024 paper. Structured metadata is provided in [`CITATION.cff`](CITATION.cff) and GitHub will render a "Cite this repository" button from it.
 
 ```bibtex
-@article{aineto2024ascal,
-  title     = {Action Model Learning with Guarantees},
-  author    = {Aineto, Diego and Scala, Enrico},
-  year      = {2024},
-  url       = {https://proceedings.kr.org/2024/75/kr2024-0075-aineto-et-al.pdf}
-}
+@inproceedings{aineto:2024:VSLAM,
+    title     = {{Action Model Learning with Guarantees}},
+    author    = {Aineto, Diego and Scala, Enrico},
+    booktitle = {{KR}},
+    pages     = {801--811},
+    year      = {2024},
+    month     = {8},
+    doi       = {10.24963/kr.2024/75},
+    url       = {https://doi.org/10.24963/kr.2024/75},
+  }
 ```
 
 ---

@@ -11,7 +11,7 @@ It manages the version-space boundaries internally and exposes a clean API:
 
     f1_s, f1_c, p_s, r_s, p_c, r_c = learner.evaluate(test_pos, test_neg)
     sound_problem = learner.sound_model()
-    vs_problem = learner.version_space()
+    complete_problem = learner.complete_model()
     border_problem = learner.raw_upper_bound()
 
 See ``evaluate``, ``evaluate_repr``, and ``evaluate_gated`` for the three
@@ -58,7 +58,7 @@ class Learner:
         f1_s, f1_c, p_s, r_s, p_c, r_c = learner.evaluate(test_pos, test_neg)
 
         sound_problem = learner.sound_model()
-        vs_problem = learner.version_space()
+        complete_problem = learner.complete_model()
         border_problem = learner.raw_upper_bound()
     """
 
@@ -79,8 +79,8 @@ class Learner:
             static_fluents: fluents that never change (used to exclude from effects).
             ground:         if True, use grounded literals instead of lifted.
             all_constants:  list of UP Object constants — required for grounded
-                            model generation (``sound_model`` / ``version_space`` /
-                            ``complete_border_model`` with ``ground=True``).
+                            model generation (``sound_model`` / ``complete_model`` /
+                            ``upper_border_split`` with ``ground=True``).
         """
         self.all_fluents = all_fluents
         self.all_actions = all_actions
@@ -245,13 +245,13 @@ class Learner:
             self.L_eff,
         )
 
-    def version_space(self, ground: bool = False) -> "Problem":  # type: ignore[name-defined]
+    def complete_model(self, ground: bool = False) -> "Problem":  # type: ignore[name-defined]
         """Build a UP Problem materialising the full learned version space.
 
         One UP action per consistent ``(hp, he)`` pair across all ``hp ∈ U_pre``
         and all ``he`` with ``L_eff ⊆ he ⊆ U_eff``.  Can be large (exponential
         in ``|U_eff − L_eff|``); for compact permissive planning use
-        ``complete_model`` instead.
+        ``upper_border_split`` instead.
 
         Args:
             ground: if True, build a grounded model (requires ``all_constants``).
@@ -306,10 +306,10 @@ class Learner:
             self.U_eff,
         )
 
-    def complete_model_single(self, ground: bool = False) -> "Problem":  # type: ignore[name-defined]
+    def upper_border_single(self, ground: bool = False) -> "Problem":  # type: ignore[name-defined]
         """Build a compact U-border UP Problem with **non-contradictory** effects per operator.
 
-        Same one-row-per-``hp ∈ U_pre`` layout as ``complete_border_model``, but each
+        Same one-row-per-``hp ∈ U_pre`` layout as ``raw_upper_bound``, but each
         operator's effects are a maximal subset of ``(U_eff - hp)`` that contains
         ``(L_eff - hp)`` and contains no opposite literals on the same atom.
 
@@ -341,7 +341,7 @@ class Learner:
             self.U_eff,
         )
 
-    def complete_model(
+    def upper_border_split(
         self,
         ground: bool = False,
         *,

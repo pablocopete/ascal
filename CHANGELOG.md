@@ -32,7 +32,7 @@ Initial public release of ASCAL (Anytime Sound and Complete Action Learning).
   - `compute_version_space_size`, `evaluate_f1score`
 - High-level `Learner` class wrapping initialization, incremental `update()`,
   batch `update_batch()`, model extraction (`sound_model`, `complete_model`,
-  `complete_model_single`, `raw_upper_bound`, `version_space`), and evaluation
+  `upper_border_split`, `upper_border_single`, `raw_upper_bound`), and evaluation
   (`evaluate`, `evaluate_repr`, `evaluate_gated`).
 - Packaging metadata for PyPI:
   - `src/`-layout with `pyproject.toml` (PEP 621) and `setuptools` backend.
