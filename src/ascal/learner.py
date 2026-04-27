@@ -59,7 +59,7 @@ class Learner:
 
         sound_problem = learner.sound_model()
         complete_problem = learner.complete_model()
-        border_problem = learner.raw_upper_bound()
+        border_problem = learner.upper_border_split()
     """
 
     def __init__(
