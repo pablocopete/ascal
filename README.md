@@ -224,7 +224,7 @@ Ensure the package is installed (`pip install -e .`) so that `import ascal` reso
 If you use ASCAL in academic work, please cite the KR 2024 paper. Structured metadata is provided in [`CITATION.cff`](CITATION.cff) and GitHub will render a "Cite this repository" button from it.
 
 ```bibtex
-@inproceedings{aineto2024ascal,
+@article{aineto2024ascal,
   title     = {Action Model Learning with Guarantees},
   author    = {Aineto, Diego and Scala, Enrico},
   year      = {2024},
