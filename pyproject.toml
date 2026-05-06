@@ -33,7 +33,7 @@ dependencies = [
 
 [project.optional-dependencies]
 notebook = ["numpy", "matplotlib", "jupyter"]
-planner  = ["up-fast-downward"]
+planner  = ["up-fast-downward>=0.2.3"]
 dev      = ["pytest>=8", "build>=1.2", "twine>=5", "ruff>=0.5"]
 
 [project.urls]

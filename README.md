@@ -61,10 +61,25 @@ pip install -e ".[dev]"
 ```
 
 ```bash
-# Exact reproducibility environment for paper/benchmark reruns
+# Paper / cluster environment (matches gpuserver conda stack: UP + FD + numpy/scipy only)
+pip install -r requirements-experiment-server.txt
+pip install -e .
+```
+
+```bash
+# Full notebook + plotting + experiments (large lockfile; spans Python 3.10–3.13)
+# Prefer a fresh venv (avoid pip install into conda "base").
 pip install -r requirements-repro-lock.txt
 pip install -e .
 ```
+
+Why two files: the **gpuserver** environment was minimal (no Jupyter). **`requirements-repro-lock.txt`** also pulls **IPython, matplotlib, scipy 1.15, numpy 2.x, …** and some of those pins were chosen on **Python 3.11+**. On **Python 3.10**, packages such as **`networkx>=3.5`** and **`contourpy==1.3.3`** are rejected by pip; the lock file is adjusted where possible (**`networkx==3.4.2`**, **`contourpy==1.3.2`**) so one file can still install on **3.10–3.13**.
+
+The locked file pins **`up-fast-downward==0.2.3`**, matching the conda environment used on the experiment server (`unified-planning==1.3.0` is pinned there too). Newer FD plugin releases are available via `pip install "ascal[planner]"` without that lock file.
+
+The notebook stack pins **`Pillow>=11`** (e.g. **11.2.1** in the lock) so **Python 3.13** installs get wheels; **Pillow 10.1.0** does not build cleanly on 3.13. For a line-by-line match to an older **Python 3.10** conda env, you can pin `Pillow==10.1.0` there instead.
+
+**Python 3.10:** **`contourpy`** is pinned to **1.3.2** in the lock (version **1.3.3** declares `Requires-Python >=3.11`).
 
 See `documentation/dependency-classification.md` for the full classification of dependencies and `documentation/dependency-validation-checklist.md` for post-install smoke tests.
 
