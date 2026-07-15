@@ -209,23 +209,42 @@ def UUP(U: set[frozenset], demonstration: Demonstration, L: set[frozenset]) -> s
     For each hu in U that would fire (hu ⊆ pre_state), extend it by adding one
     literal from hL ∈ L_pre that was absent from pre_state.
 
-    Subsumption filter (post-hoc): after generating all candidates, keep only
-    the MINIMAL elements — discard h if any strictly smaller h2 (h2 ⊂ h, i.e.
-    h2 is more general) already exists in the candidate set.
-    This is order-independent.
+    Subsumption filter: keep only the MINIMAL elements of the candidate set —
+    discard h if any strictly smaller h2 (h2 ⊂ h, i.e. h2 is more general)
+    exists among the candidates. This is order-independent.
+
+    Two exact shortcuts replace the original O(|candidates|²) filter, which
+    dominated batch learning on high-arity domains (93% of profiled wall time
+    on rovers; shadow-verified output-identical over 653 live calls):
+    1) If no hypothesis fires, the demonstration is already explained and U —
+       a minimal antichain by construction — is returned unchanged.
+    2) Candidates are scanned in increasing size order and tested only against
+       already-accepted minimal elements. Exact by transitivity: any strict
+       subset of h in the candidate set is or contains a smaller minimal
+       element, and equal-size elements are never strict subsets.
+
+    Precondition: ``U`` is a minimal antichain (no element is a proper subset of
+    another). The learner maintains this everywhere — ``U_pre`` starts as
+    ``{frozenset()}`` and is only ever updated by ``RUP`` (which filters) and
+    ``UUP`` (which returns a minimal set) — so shortcut (1)'s ``return U`` is
+    exactly ``minimal(U)``. If you call ``UUP`` directly with a non-minimal
+    ``U`` and no hypothesis fires, it returns ``U`` unfiltered rather than its
+    minimal elements.
     """
     pre_state = demonstration.pre_state.literals
-    candidates = set()
-    for hu in U:
-        if not hu.issubset(pre_state):
-            candidates.add(hu)
-        else:
-            for hL in L:
-                missing = hL.difference(pre_state)
-                for l in missing:
-                    candidates.add(hu.union(frozenset({l})))
-    # Keep only minimal elements (h2 < h means h2 is a proper subset of h)
-    return {h for h in candidates if not any(h2 < h for h2 in candidates)}
+    firing = {hu for hu in U if hu.issubset(pre_state)}
+    if not firing:
+        return U
+    candidates = U - firing
+    for hu in firing:
+        for hL in L:
+            for l in hL.difference(pre_state):
+                candidates.add(hu.union((l,)))
+    minimal: list[frozenset] = []
+    for h in sorted(candidates, key=len):
+        if not any(m < h for m in minimal):
+            minimal.append(h)
+    return set(minimal)
 
 # Effect operators
 # Initialization

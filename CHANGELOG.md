@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-07-15
+
+### Changed
+
+- `UUP` (upper-precondition update): replaced the post-hoc O(|candidates|²)
+  minimal-element filter with two exact shortcuts — an early return when no
+  hypothesis fires, and a size-sorted scan that compares each candidate only
+  against already-accepted minimal elements. **Output-identical** to the
+  previous filter on any minimal-antichain `U` (the invariant the learner
+  maintains); verified over 200k randomized cases and 653 live calls. Cuts
+  per-probe update time substantially on high-arity domains (~5× on rovers);
+  neutral on conversion-bound domains. `UUP` remains a notable cost center —
+  further optimization is possible.
+  - Note: the early-return shortcut assumes `U` is a minimal antichain (always
+    true via the learner). Calling `UUP` directly with a non-minimal `U` and no
+    firing hypothesis now returns `U` unfiltered.
+
 ## [0.1.0] - 2026-04-22
 
 Initial public release of ASCAL (Anytime Sound and Complete Action Learning).
@@ -39,5 +56,6 @@ Initial public release of ASCAL (Anytime Sound and Complete Action Learning).
   - GPL-3.0-or-later license.
   - Optional extras: `notebook`, `planner`, `dev`.
 
-[Unreleased]: https://github.com/pablocopete/ascal/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/pablocopete/ascal/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/pablocopete/ascal/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/pablocopete/ascal/releases/tag/v0.1.0
