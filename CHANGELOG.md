@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-24
+
+### Changed
+
+- `compute_version_space_size` / `Learner.version_space_size`: `total` is now
+  the **exact** number of semantically distinct `(hp, he)` action models,
+  computed by a weighted inclusion–exclusion with closed-form terms
+  `2^|G−l| · 2^|S−G| · 3^|S∩G|` (`G = U_eff − L_eff`). Previously
+  `n_pre * 2^|G|`, an upper bound that double-counted no-op effect variants
+  (effect literals already guaranteed by `hp`) — inflation `2^|hp ∩ G|` per
+  hypothesis, triggered by every unconverged static/frame literal (13.5×
+  observed on driverlog `drive_truck`). `n_pre` and the `n_eff` proxy are
+  unchanged; the count now matches what `generate_complete_model` /
+  `generate_true_full_version_space` materialize (with `he = ∅` deliberately
+  included, and no contradiction filtering — vacuous once an action has one
+  positive demo).
+
+### Added
+
+- `compute_version_space_upper_bound` / `Learner.version_space_upper_bound`:
+  the pre-0.2.0 proxy semantics (`total = n_pre * n_eff`), kept for
+  comparability with metrics recorded by runs on ascal < 0.2.0.
+- `total_exact` flag in the per-action report (False only on the
+  ≥20-frontier-element estimate fallback, alongside `n_pre_exact`).
+- `tests/test_version_space_size.py` (brute-force randoms, split-overlap,
+  semantic-class bijection, operator-stream soundness/monotonicity) and
+  `tests/test_version_space_size_e2e.py` (bundled-benchmark learner runs with
+  full materializer enumeration as oracle; skips cleanly without a planner).
+
 ## [0.1.1] - 2026-07-15
 
 ### Changed

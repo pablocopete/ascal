@@ -32,53 +32,85 @@ from itertools import combinations
 def _count_pre_interval_single_lower(
     u_hyps: set[frozenset],
     l_hyp: frozenset,
+    eff_gap: frozenset = frozenset(),
     ie_term_limit: int = 1_000_000,
-) -> tuple[int, bool]:
+) -> tuple[int, int, bool]:
     """
-    Count |{h : exists u in U, u ⊆ h ⊆ l}| exactly via inclusion-exclusion
-    when there is a single lower bound l.
+    Count, over the precondition version space VS = {h : exists u in U, u ⊆ h ⊆ l}
+    (single lower bound l), via one exact inclusion-exclusion pass:
+
+      n_pre    = |VS|
+      n_models = Σ_{h ∈ VS} 2^|G − h|     with G = eff_gap = U_eff − L_eff
+
+    n_models is the number of **semantically distinct** (hp, he) action models:
+    for a fixed hp the materializers enumerate effects in the hp-adjusted
+    interval [L_eff − hp, U_eff − hp] of size 2^|G − hp|, because an effect
+    literal already guaranteed by the precondition is a no-op — (hp, he) and
+    (hp, he ∪ {x}) with x ∈ hp denote the same model.  Multiplying |VS| by the
+    global 2^|G| instead (the pre-2026-07-24 ``total``) double-counts those
+    no-op variants and is only an upper bound.  With eff_gap=∅,
+    n_models == n_pre.
+
+    Closed form per IE term — must-set B = ⋃ of a subset of U, S = l − B:
+
+      Σ_{B ⊆ h ⊆ l} 2^|G−h|  =  2^|G−l| · 2^|S−G| · 3^|S∩G|
+
+    (|G − h| = |G − l| + |(G∩l) − h| since h ⊆ l; each x ∈ S∩G yields three
+    distinct models: x∉hp ∧ x∉he, x∉hp ∧ x∈he, x∈hp with effect-x a no-op.)
 
     Returns:
-      (count, exact_flag)
+      (n_pre, n_models, exact_flag)
     """
     # Keep only U hypotheses compatible with l
     valid_u = [u for u in u_hyps if u.issubset(l_hyp)]
     m = len(l_hyp)
+    gap_out = len(eff_gap - l_hyp)  # gap literals no hp can absorb
+    gap_in = eff_gap & l_hyp
+
+    def _interval_models(must_set: frozenset) -> int:
+        """Σ_{must_set ⊆ h ⊆ l} 2^|G−h| — closed form above, S = l − must_set."""
+        s = m - len(must_set)
+        s_in = len(gap_in - must_set)  # |S ∩ G|
+        return (1 << (gap_out + s - s_in)) * 3**s_in
 
     if m == 0:
         # Only hypothesis is empty set; valid iff some u ⊆ empty (i.e., u==empty)
-        return (1 if any(len(u) == 0 for u in valid_u) else 0), True
+        ok = any(len(u) == 0 for u in valid_u)
+        return (1 if ok else 0), ((1 << gap_out) if ok else 0), True
 
     if not valid_u:
-        return 0, True
+        return 0, 0, True
 
     # If empty precondition is in U, then every h ⊆ l is valid
     if any(len(u) == 0 for u in valid_u):
-        return (1 << m), True
+        return (1 << m), _interval_models(frozenset()), True
 
     k = len(valid_u)
     # inclusion-exclusion terms = 2^k - 1
     if (1 << k) - 1 > ie_term_limit:
         # Fallback bounds when exact IE is too large
-        # lower: largest single up-set
-        lower = max(1 << (m - len(u)) for u in valid_u)
-        # upper: sum of single up-sets, clipped by full space
-        upper = min(sum(1 << (m - len(u)) for u in valid_u), 1 << m)
-        # midpoint estimate
-        return (lower + upper) // 2, False
+        singles_pre = [1 << (m - len(u)) for u in valid_u]
+        singles_mod = [_interval_models(u) for u in valid_u]
+        # lower: largest single up-set; upper: sum of single up-sets,
+        # clipped by the full down-set of l; midpoint estimate
+        est_pre = (max(singles_pre) + min(sum(singles_pre), 1 << m)) // 2
+        est_mod = (
+            max(singles_mod) + min(sum(singles_mod), _interval_models(frozenset()))
+        ) // 2
+        return est_pre, est_mod, False
 
-    # Exact inclusion-exclusion:
-    # |⋃_u E_u| where E_u = {h ⊆ l : u ⊆ h} and |E_u| = 2^(m-|u|)
-    total = 0
+    # Exact inclusion-exclusion over ⋃_u E_u, E_u = {h : u ⊆ h ⊆ l};
+    # ⋃grp ⊆ l always holds (every u ∈ valid_u is ⊆ l), so no term is empty.
+    n_pre = 0
+    n_models = 0
     vu = list(valid_u)
     for r in range(1, k + 1):
         sign = 1 if (r % 2 == 1) else -1
         for grp in combinations(vu, r):
-            union_u = set().union(*grp)
-            if len(union_u) > m:
-                continue
-            total += sign * (1 << (m - len(union_u)))
-    return total, True
+            union_u = frozenset().union(*grp)
+            n_pre += sign * (1 << (m - len(union_u)))
+            n_models += sign * _interval_models(union_u)
+    return n_pre, n_models, True
 
 
 def compute_version_space_size(
@@ -90,8 +122,19 @@ def compute_version_space_size(
 ) -> dict[str, dict]:
     """
     Version-space size with multi-U_pre support.
-    - Pre: exact for singleton L_pre via inclusion-exclusion over U_pre.
-    - Eff: current interval proxy 2^|U_eff - L_eff|.
+    - n_pre: exact for singleton L_pre via inclusion-exclusion over U_pre.
+    - n_eff: interval proxy 2^|U_eff - L_eff| (kept for plotting/back-compat;
+      per-hp upper bound, see below).
+    - total: exact number of semantically distinct (hp, he) models
+      (2026-07-24; previously n_pre * n_eff, an upper bound that counted
+      no-op effect variants — literals in hp ∩ (U_eff − L_eff) — twice).
+      Effects are counted in the hp-adjusted interval [L_eff−hp, U_eff−hp],
+      matching what generate_complete_model / generate_true_full_version_space
+      materialize.  Two deliberate inclusions: he = ∅ counts (a no-op action is
+      a legal hypothesis; the materializers skip it only as a planning
+      practicality), and contradictory literal sets are not filtered (vacuous
+      once the action has one positive demo, since then l and U_eff are subsets
+      of consistent states; matches the materializers' precondition side).
     """
     report = {}
 
@@ -112,39 +155,46 @@ def compute_version_space_size(
                 "converged": False,
                 "collapsed": True,
                 "n_pre_exact": True,
+                "total_exact": True,
             }
             continue
 
-        # ----- precondition size -----
+        heL = next(iter(le))
+        heU = next(iter(ue))
+        diff = heU - heL
+
+        # ----- precondition size + exact model count (one IE pass) -----
         # In this codebase L_pre is usually singleton, but keep a fallback.
         if len(lp) == 1:
             l_hyp = next(iter(lp))
-            n_pre, exact = _count_pre_interval_single_lower(up, l_hyp)
+            n_pre, n_models, exact = _count_pre_interval_single_lower(
+                up, l_hyp, eff_gap=diff
+            )
             pre_converged = (len(up) == 1 and next(iter(up)) == l_hyp)
         else:
             # Conservative fallback if multiple lower bounds exist:
             # sum per-lower (can overcount overlaps)
             n_pre = 0
+            n_models = 0
             exact = False
             for l_hyp in lp:
-                c, _ = _count_pre_interval_single_lower(up, l_hyp)
+                c, cm, _ = _count_pre_interval_single_lower(up, l_hyp, eff_gap=diff)
                 n_pre += c
+                n_models += cm
             pre_converged = False
 
-        # ----- effect size (current proxy) -----
-        heL = next(iter(le))
-        heU = next(iter(ue))
-        diff = heU - heL
+        # ----- effect size (interval proxy, per-hp upper bound) -----
         n_eff = 1 << len(diff)
         eff_converged = (len(diff) == 0)
 
         report[a] = {
             "n_pre": n_pre,                 # interval size (not len(U_pre))
             "n_eff": n_eff,
-            "total": n_pre * n_eff,
+            "total": n_models,              # exact distinct models (≤ n_pre * n_eff)
             "converged": pre_converged and eff_converged,
             "collapsed": False,
             "n_pre_exact": exact,
+            "total_exact": exact,
             # useful diagnostics
             "frontier_u_pre": len(up),
             "frontier_l_pre": len(lp),
@@ -152,6 +202,37 @@ def compute_version_space_size(
         }
 
     return report
+
+
+def compute_version_space_upper_bound(
+    all_actions: list,
+    U_pre: dict[str, set[frozenset]],
+    L_pre: dict[str, set[frozenset]],
+    L_eff: dict[str, set[frozenset]],
+    U_eff: dict[str, set[frozenset]],
+) -> dict[str, dict]:
+    """
+    Version-space report with the pre-0.2.0 ``total`` semantics:
+    ``total = n_pre * n_eff`` (global effect proxy, no per-hp adjustment).
+
+    This is an **upper bound** on the exact model count reported by
+    :func:`compute_version_space_size`: it bills every hypothesis the full
+    effect gap, so no-op effect variants — effect literals already guaranteed
+    by ``hp`` — are counted as extra models (inflation ``2^|hp ∩ (U_eff−L_eff)|``
+    per hypothesis; e.g. 13.5x observed on driverlog ``drive_truck``).
+    Kept for comparability with metrics recorded by runs on ascal < 0.2.0.
+
+    All keys except ``total`` are identical to
+    :func:`compute_version_space_size`; the ``total_exact`` flag is dropped
+    (``total`` here is a true upper bound whenever ``n_pre_exact`` is True,
+    and inherits the midpoint estimate on the IE fallback).
+    """
+    report = compute_version_space_size(all_actions, U_pre, L_pre, L_eff, U_eff)
+    for entry in report.values():
+        entry["total"] = entry["n_pre"] * entry["n_eff"]
+        entry.pop("total_exact", None)
+    return report
+
 
 def old_compute_version_space_size(
     all_actions: list,

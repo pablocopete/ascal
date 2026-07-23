@@ -34,6 +34,7 @@ from ascal.algorithm import (
 )
 from ascal.evaluation import (
     compute_version_space_size,
+    compute_version_space_upper_bound,
     evaluate_detailed,
     evaluate_representative,
     evaluate_convergence_gated,
@@ -394,12 +395,30 @@ class Learner:
         """Per-action version space statistics.
 
         Each entry contains:
-            n_pre:     number of precondition hypotheses in U_pre
-            n_eff:     upper bound on effect hypotheses (2^|U_eff - L_eff|)
+            n_pre:     number of precondition hypotheses in the interval
+                       {h : exists u in U_pre, u ⊆ h ⊆ L_pre} (exact IE count)
+            n_eff:     interval proxy 2^|U_eff - L_eff| (per-hp upper bound)
+            total:     exact number of semantically distinct (hp, he) models
+                       (effects counted per-hp in [L_eff-hp, U_eff-hp])
             converged: True if L == U for both pre and eff
-            total:     n_pre * n_eff
         """
         return compute_version_space_size(
+            self.all_actions,
+            self.U_pre,
+            self.L_pre,
+            self.L_eff,
+            self.U_eff,
+        )
+
+    @property
+    def version_space_upper_bound(self) -> dict[str, dict]:
+        """Per-action report with the pre-0.2.0 ``total = n_pre * n_eff`` proxy.
+
+        Upper bound on :attr:`version_space_size`'s exact ``total`` (it counts
+        no-op effect variants as extra models); kept for comparability with
+        metrics recorded by runs on ascal < 0.2.0.
+        """
+        return compute_version_space_upper_bound(
             self.all_actions,
             self.U_pre,
             self.L_pre,

@@ -30,7 +30,8 @@ from .algorithm import (
     precondition_interval_hypotheses,
 )
 from .evaluation import(
-    compute_version_space_size, evaluate_f1score, evaluate_detailed,
+    compute_version_space_size, compute_version_space_upper_bound,
+    evaluate_f1score, evaluate_detailed,
     evaluate_representative, evaluate_convergence_gated,
 )
 from .learner import Learner
@@ -95,6 +96,7 @@ __all__ = [
     "get_subsets",
     "generate_version_space_effects",
     "compute_version_space_size",
+    "compute_version_space_upper_bound",
     "evaluate_f1score",
     "evaluate_detailed",
     "evaluate_representative",
